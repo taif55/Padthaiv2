@@ -2260,23 +2260,27 @@ if (val === "DONE_ALL") {
                 
                 if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                     const landmarks = results.multiHandLandmarks[0];
-                    const wrist = landmarks[0]; 
+                    // เปลี่ยนเป้าหมายจาก "ข้อมือ" มาเป็น "ปลายนิ้วชี้" (จุดที่ 8 ของ AI) เพราะเคลื่อนที่ไวกว่า
+                    const indexTip = landmarks[8]; 
                     
+                    // วาดจุดติดตามบนจอพรีวิวที่ปลายนิ้วชี้
                     ctx.fillStyle = "#00e676";
                     ctx.beginPath();
-                    ctx.arc(wrist.x * canvas.width, wrist.y * canvas.height, 5, 0, 2 * Math.PI);
+                    ctx.arc(indexTip.x * canvas.width, indexTip.y * canvas.height, 6, 0, 2 * Math.PI);
                     ctx.fill();
 
-                    let deltaY = wrist.y - lastWristY;
+                    // คำนวณความเร็วในการสะบัดนิ้วชี้ลง
+                    let deltaY = indexTip.y - lastWristY;
                     let now = Date.now();
                     
-                    if (deltaY > 0.05 && (now - lastHandTapTime > 300)) {
+                    // ปรับจูน: ใช้ระยะสะบัดแค่นิดเดียว (> 0.025) และลดตัวกันกดเบิ้ลเหลือ 200ms (รองรับความเร็วได้ถึง 300 BPM)
+                    if (deltaY > 0.025 && (now - lastHandTapTime > 200)) {
                         lastHandTapTime = now;
                         ctx.fillStyle = "rgba(255, 61, 0, 0.5)";
                         ctx.fillRect(0, 0, canvas.width, canvas.height);
                         remoteTapTempo(null); 
                     }
-                    lastWristY = wrist.y;
+                    lastWristY = indexTip.y; // เก็บค่าตำแหน่งนิ้วไว้เทียบกับเฟรมถัดไป
                 }
             });
 
