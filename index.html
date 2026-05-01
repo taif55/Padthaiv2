@@ -7,6 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- เพิ่มไลบรารีจับภาพมือของ Google MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <style>
         :root {
             /* ค่าตั้งต้นสำหรับจังหวะกระพริบ (128 BPM = 0.468s) */
@@ -2200,7 +2203,90 @@ if (val === "DONE_ALL") {
         document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') await requestWakeLock(); });
 
         window.addEventListener("popstate", function (e) { if (!document.getElementById('modal').classList.contains('hidden')) { handleBack(); } });
+// --- ระบบ AI Camera Tap Tempo ---
+        let isCamTapActive = false;
+        let camera = null;
+        let lastWristY = 0;
+        let lastHandTapTime = 0;
 
+        function toggleCameraTap() {
+            const camBtn = document.getElementById('camToggleBtn');
+            const titleText = document.getElementById('titleText');
+            const canvas = document.getElementById('outputCanvas');
+            const videoElement = document.getElementById('inputVideo');
+
+            if (isCamTapActive) {
+                isCamTapActive = false;
+                canvas.classList.add('hidden');          
+                titleText.classList.remove('hidden');    
+                camBtn.classList.remove('border-teal-500', 'shadow-[0_0_15px_#0d9488]');
+                camBtn.classList.add('border-gray-700'); 
+                if (camera) { camera.stop(); }
+                return;
+            }
+
+            if (typeof Hands === 'undefined') {
+                alert("กำลังโหลดระบบ AI กรุณารอสักครู่แล้วกดใหม่ครับ");
+                return;
+            }
+
+            isCamTapActive = true;
+            titleText.classList.add('hidden');       
+            canvas.classList.remove('hidden');       
+            camBtn.classList.remove('border-gray-700');
+            camBtn.classList.add('border-teal-500', 'shadow-[0_0_15px_#0d9488]'); 
+
+            const hands = new Hands({locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+            }});
+            
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 0, 
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5
+            });
+
+            hands.onResults((results) => {
+                const ctx = canvas.getContext('2d');
+                
+                if (canvas.width !== results.image.width) {
+                    canvas.width = results.image.width;
+                    canvas.height = results.image.height;
+                }
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+                
+                if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                    const landmarks = results.multiHandLandmarks[0];
+                    const wrist = landmarks[0]; 
+                    
+                    ctx.fillStyle = "#00e676";
+                    ctx.beginPath();
+                    ctx.arc(wrist.x * canvas.width, wrist.y * canvas.height, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    let deltaY = wrist.y - lastWristY;
+                    let now = Date.now();
+                    
+                    if (deltaY > 0.05 && (now - lastHandTapTime > 300)) {
+                        lastHandTapTime = now;
+                        ctx.fillStyle = "rgba(255, 61, 0, 0.5)";
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        remoteTapTempo(null); 
+                    }
+                    lastWristY = wrist.y;
+                }
+            });
+
+            camera = new Camera(videoElement, {
+                onFrame: async () => { await hands.send({image: videoElement}); },
+                width: 320, height: 240, facingMode: "user" 
+            });
+            camera.start();
+        }
+        // --- จบระบบ AI ---
         window.onload = () => {
             try {
                 history.pushState(null, null, window.location.pathname);
