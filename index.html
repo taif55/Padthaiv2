@@ -1558,9 +1558,9 @@ if (val === "DONE_ALL") {
 
                 if(!characteristic || !patterns[idx].code) return;
                 
-                // ดึงความเร็วล่าสุดไปคำนวณและเล่นเลยทันที
+                // ดึงความเร็วล่าสุดไปคำนวณและเล่นเลยทันที โดยข้ามการบันทึก (false)
                 let targetBeats = getBeatsFromSlider(sclDragBaseVal);
-                remoteEditAction('BG', () => setRoomScale(targetBeats));
+                remoteEditAction('BG', () => setRoomScale(targetBeats), false);
                 safeBleWrite("T1.00");
                 
             } else if (layer === 'FG') {
@@ -1573,9 +1573,9 @@ if (val === "DONE_ALL") {
 
                 if(!characteristic || !patterns[idx].code) return;
                 
-                // ดึงความเร็วล่าสุดของ FG ไปคำนวณและเล่นเลยทันที
+                // ดึงความเร็วล่าสุดของ FG ไปคำนวณและเล่นเลยทันที โดยข้ามการบันทึก (false)
                 let targetBeats = getBeatsFromSlider(sclDragBaseValFG);
-                remoteEditAction('FG', () => setRoomScale(targetBeats));
+                remoteEditAction('FG', () => setRoomScale(targetBeats), false);
                 safeBleWrite("FGT1.00");
                 
             } else if (layer === 'SP') {
@@ -1588,9 +1588,9 @@ if (val === "DONE_ALL") {
 
                 if(!characteristic || !patterns[idx].code) return;
                 
-                // ดึงความเร็วล่าสุดของ SP ไปคำนวณและเล่นเลยทันที
+                // ดึงความเร็วล่าสุดของ SP ไปคำนวณและเล่นเลยทันที โดยข้ามการบันทึก (false)
                 let targetBeats = getBeatsFromSlider(sclDragBaseValSP);
-                remoteEditAction('SP', () => setRoomScale(targetBeats));
+                remoteEditAction('SP', () => setRoomScale(targetBeats), false);
                 safeBleWrite("SPT1.00");
             }
         }
