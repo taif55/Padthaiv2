@@ -816,9 +816,9 @@
                             setTimeout(() => { safeBleWrite("B:" + currentBrt.toFixed(2)); }, 150);
                         }
 
-                        remoteEditAction('BG', () => {
-                            snapLoopToGrid();
-                        });
+                    if (activeIdxBG !== -1) remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)));
+                        if (activeIdxFG !== -1) remoteEditAction('FG', () => setRoomScale(getBeatsFromSlider(sclDragBaseValFG)));
+                        if (activeIdxSP !== -1) remoteEditAction('SP', () => setRoomScale(getBeatsFromSlider(sclDragBaseValSP)));
                     }, delayToSync);
                 }
             }
@@ -893,16 +893,19 @@
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
                     editorTapTimeout = setTimeout(() => {
                         if (!document.getElementById('modal').classList.contains('hidden')) {
-                            let scaleRatio = oldBpm / bpm;
-                            clips.forEach(c => { c.start *= scaleRatio; c.duration *= scaleRatio; });
+                          let targetBeats = 4;
+                            if (activeLayer === 'BG') targetBeats = getBeatsFromSlider(sclDragBaseVal);
+                            else if (activeLayer === 'FG') targetBeats = getBeatsFromSlider(sclDragBaseValFG);
+                            else if (activeLayer === 'SP') targetBeats = getBeatsFromSlider(sclDragBaseValSP);
+                            setRoomScale(targetBeats);
                             
                             updateGridBackground(); 
-                            markUnsaved();
-                            renderClips();
-                            updateLoopLine();
-                            updateCodeMonitor();
                             fitToScreen(); 
                             restartPlayhead(); 
+                        } else {
+                            if (activeIdxBG !== -1) remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)));
+                            if (activeIdxFG !== -1) remoteEditAction('FG', () => setRoomScale(getBeatsFromSlider(sclDragBaseValFG)));
+                            if (activeIdxSP !== -1) remoteEditAction('SP', () => setRoomScale(getBeatsFromSlider(sclDragBaseValSP)));
                         }
                     }, delayToSync);
                 }
