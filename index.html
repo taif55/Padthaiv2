@@ -802,6 +802,8 @@
                     updateBeatDuration(); 
 
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
+                    
+                    // ตั้งเวลาหน่วงตายตัวที่ 800ms (0.8วิ) พอหยุดเคาะปุ๊บ ไฟเปลี่ยนปั๊บ
                     editorTapTimeout = setTimeout(() => {
                         if(characteristic) {
                             let currentBrt = parseFloat(document.getElementById('bgBrightSlider').value);
@@ -809,7 +811,7 @@
                             setTimeout(() => { safeBleWrite("B:" + currentBrt.toFixed(2)); }, 150);
                         }
 
-                        // บังคับสเกลแบบสมบูรณ์และเตะสปีดเข้า ESP32 ทันที (ไม่ต้องง้อปุ่ม Room)
+                        // บังคับสเกลแบบสมบูรณ์และเตะสปีดเข้า ESP32 ทันที (ไม่ต้องง้อปุ่ม Room แล้ว)
                         if (activeIdxBG !== -1) {
                             remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)));
                             throttledBleWrite('speedBG', "T1.00", 'withoutResponse', 50);
@@ -886,6 +888,7 @@
                     
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
                     
+                    // ตั้งเวลาหน่วงตายตัวที่ 800ms
                     editorTapTimeout = setTimeout(() => {
                         if (!document.getElementById('modal').classList.contains('hidden')) {
                             let targetBeats = 4;
@@ -894,7 +897,7 @@
                             else if (activeLayer === 'SP') targetBeats = getBeatsFromSlider(sclDragBaseValSP);
                             
                             setRoomScale(targetBeats); 
-                            // ฟังก์ชัน setRoomScale ด้านในจะทำหน้าที่รีเฟรชหน้าจอทั้งหมดให้เอง
+                            // ฟังก์ชัน setRoomScale ด้านในจะทำหน้าที่รีเฟรชหน้าจอและสัดส่วนคลิปทั้งหมดให้เอง
                         } else {
                             if (activeIdxBG !== -1) {
                                 remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)));
