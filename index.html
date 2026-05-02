@@ -876,6 +876,7 @@
                 let rawBpm = 60000 / avgDiff;
                 let bpm = Math.round(rawBpm * 2) / 2; 
                 if (bpm > 30 && bpm <= 200) {
+                  let oldBpm = editorBPM; // เก็บค่าเดิมไว้คำนวณสัดส่วน
                     editorBPM = bpm;
                     document.getElementById('editorBpmDisplay').innerText = editorBPM;
                     document.getElementById('liveBpmDisplay').innerText = editorBPM;
@@ -892,14 +893,18 @@
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
                     editorTapTimeout = setTimeout(() => {
                         if (!document.getElementById('modal').classList.contains('hidden')) {
+                            let scaleRatio = oldBpm / bpm;
+                            clips.forEach(c => { c.start *= scaleRatio; c.duration *= scaleRatio; });
+                            
                             updateGridBackground(); 
-                            snapLoopToGrid(); 
+                            markUnsaved();
+                            renderClips();
+                            updateLoopLine();
+                            updateCodeMonitor();
                             fitToScreen(); 
                             restartPlayhead(); 
-                        } else {
-                            snapLoopToGrid();
                         }
-                    }, delayToSync); 
+                    }, delayToSync);
                 }
             }
             const btn = document.getElementById('editorTapBtn');
