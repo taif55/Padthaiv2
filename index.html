@@ -802,11 +802,7 @@
                     updateBeatDuration(); 
                     
                     let beatTimeMs = 60000 / bpm;
-                    let beatsToWait = Math.ceil(1200 / beatTimeMs); 
-                    if (beatsToWait < 2) beatsToWait = 2; 
-                    
-                    let targetTime = now + (beatTimeMs * beatsToWait);
-                    let delayToSync = targetTime - Date.now();
+                    let delayToSync = Math.max(600, beatTimeMs * 1.2);
 
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
                     editorTapTimeout = setTimeout(() => {
@@ -884,13 +880,10 @@
                     updateBeatDuration(); 
                     
                     let beatTimeMs = 60000 / bpm;
-                    let beatsToWait = Math.ceil(1200 / beatTimeMs); 
-                    if (beatsToWait < 2) beatsToWait = 2; 
-                    
-                    let targetTime = now + (beatTimeMs * beatsToWait);
-                    let delayToSync = targetTime - Date.now();
+                    let delayToSync = Math.max(600, beatTimeMs * 1.2);
                     
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
+                    
                     editorTapTimeout = setTimeout(() => {
                         if (!document.getElementById('modal').classList.contains('hidden')) {
                           let targetBeats = 4;
