@@ -789,9 +789,15 @@
                 }, 100);
             }
         }
-        function remoteTapTempo(e) {
+       function remoteTapTempo(e) {
             if(e) e.preventDefault();
             const now = Date.now();
+            
+            // ป้องกันจังหวะเพี้ยน: ถ้าทิ้งช่วงไม่ได้เคาะนานเกิน 2 วินาที (ช้ากว่า 30 BPM) ให้ล้างค่าความจำเดิมทิ้งไปเลย
+            if (editorTapTimes.length > 0 && now - editorTapTimes[editorTapTimes.length - 1] > 2000) {
+                editorTapTimes = [];
+            }
+            
             editorTapTimes.push(now); 
             if (editorTapTimes.length > 5) editorTapTimes.shift();
             if (editorTapTimes.length > 1) {
@@ -876,6 +882,12 @@
         function editorTapTempo(e) {
             if(e) e.preventDefault();
             const now = Date.now();
+            
+            // ป้องกันจังหวะเพี้ยน: ถ้าทิ้งช่วงไม่ได้เคาะนานเกิน 2 วินาที ให้ล้างค่าเหมือนกัน
+            if (editorTapTimes.length > 0 && now - editorTapTimes[editorTapTimes.length - 1] > 2000) {
+                editorTapTimes = [];
+            }
+            
             editorTapTimes.push(now);
             if (editorTapTimes.length > 5) editorTapTimes.shift();
             if (editorTapTimes.length > 1) {
@@ -2288,17 +2300,22 @@ if (val === "DONE_ALL") {
                     ctx.fill();
 
                     // คำนวณความเร็วในการสะบัดนิ้วชี้ลง
-                    let deltaY = indexTip.y - lastWristY;
-                    let now = Date.now();
-                    
-                    // ปรับจูน: ใช้ระยะสะบัดแค่นิดเดียว (> 0.025) และลดตัวกันกดเบิ้ลเหลือ 200ms (รองรับความเร็วได้ถึง 300 BPM)
-                    if (deltaY > 0.025 && (now - lastHandTapTime > 200)) {
-                        lastHandTapTime = now;
-                        ctx.fillStyle = "rgba(255, 61, 0, 0.5)";
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                        remoteTapTempo(null); 
+                    if (lastWristY !== 0) {
+                        let deltaY = indexTip.y - lastWristY;
+                        let now = Date.now();
+                        
+                        // ปรับจูน: ใช้ระยะสะบัดแค่นิดเดียว (> 0.045) และลดตัวกันกดเบิ้ลเหลือ 200ms
+                        if (deltaY > 0.045 && (now - lastHandTapTime > 200)) {
+                            lastHandTapTime = now;
+                            ctx.fillStyle = "rgba(255, 61, 0, 0.5)";
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+                            remoteTapTempo(null); 
+                        }
                     }
                     lastWristY = indexTip.y; // เก็บค่าตำแหน่งนิ้วไว้เทียบกับเฟรมถัดไป
+                } else {
+                    // ถ้ามือออกนอกกล้อง ให้รีเซ็ตตำแหน่งนิ้ว เพื่อไม่ให้ตอนเอามือเข้ามาใหม่ AI มองว่าเป็นการสะบัด
+                    lastWristY = 0;
                 }
             });
 
