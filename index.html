@@ -906,17 +906,17 @@
                     
                     analyser.getByteFrequencyData(dataArray);
                     
-                    let sum = 0;
-                    for(let i=0; i<dataArray.length; i++) { sum += dataArray[i]; }
-                    let avg = sum / dataArray.length;
+                    // หา "จุดที่เสียงกระแทกแรงที่สุด (Peak Volume)" ในเสี้ยววินาทีนั้น
+                    // ค่าสูงสุดที่เป็นไปได้คือ 255 
+                    let peakVolume = 0;
+                    for(let i=0; i<dataArray.length; i++) { 
+                        if(dataArray[i] > peakVolume) peakVolume = dataArray[i]; 
+                    }
                     
-                    // ปริ้นท์ค่าความดังออกหน้าคอนโซล (ถ้าบังดุลต่อคอม จะเห็นว่าเสียงดังขึ้นเท่าไหร่)
-                    // console.log("Bass Level:", avg); 
-                    
-                    // ปรับเกณฑ์กลับมาที่ 50 (ถ้าปิด AutoGain เสียงน่าจะเข้าแรงขึ้นเยอะครับ)
-                    if (avg > 50) { 
+                    // ตั้งเกณฑ์ความดัง Peak (ลองเริ่มที่ 180 ถ้าเคาะแล้วไม่ติด ค่อยลดเหลือ 150 หรือ 100 ครับ)
+                    if (peakVolume > 180) { 
                         let now = Date.now();
-                        // ลดดีเลย์กันกดเบิ้ลลงเหลือ 250ms ให้สับจังหวะได้ถี่ขึ้น
+                        // หน่วงเวลา 250ms เพื่อป้องกันไฟสับรัวเกินไป (ประมาณ 4 ครั้งต่อวินาที)
                         if (now - lastAutoBeatTime > 250) {
                             lastAutoBeatTime = now;
                             
