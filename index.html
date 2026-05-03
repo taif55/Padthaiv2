@@ -796,18 +796,46 @@
             selectedIdx = prevIdx;
             clips = []; 
         }
+        let endFadeTime = 5; // ค่าเริ่มต้นให้ค่อยๆ ดับใน 5 วินาที
+        let endBtnClickTimer = null;
+        
         function triggerEndSong() {
-            if (characteristic) {
-                safeBleWrite("SLOWSTOP", 'withoutResponse');
-                const btn = document.getElementById('endSongBtn');
-                btn.style.transform = 'scale(0.90)';
-                btn.style.backgroundColor = 'white';
-                btn.style.color = '#9333ea';
-                setTimeout(() => { 
-                    btn.style.transform = 'none'; 
-                    btn.style.backgroundColor = '#9333ea'; 
-                    btn.style.color = 'white'; 
-                }, 100);
+            if (endBtnClickTimer) {
+                // ถ้ากดซ้ำภายใน 300ms (ดับเบิลคลิก) -> ยกเลิกการส่งคำสั่งหยุด แล้วเปิดหน้าต่างตั้งค่าแทน
+                clearTimeout(endBtnClickTimer);
+                endBtnClickTimer = null;
+                
+                let input = prompt("ตั้งค่าเวลาหน่วงก่อนไฟดับสนิท (วินาที):", endFadeTime);
+                if (input !== null) {
+                    let parsed = parseFloat(input);
+                    if (!isNaN(parsed) && parsed > 0) {
+                        endFadeTime = parsed;
+                        alert("ตั้งเวลา Fade Out เป็น " + endFadeTime + " วินาทีเรียบร้อย!");
+                    } else {
+                        alert("กรุณาใส่ตัวเลขที่มากกว่า 0 ครับ");
+                    }
+                }
+            } else {
+                // กดครั้งแรก (ซิงเกิลคลิก) เริ่มจับเวลา
+                endBtnClickTimer = setTimeout(() => {
+                    endBtnClickTimer = null; // รีเซ็ต timer
+                    
+                    if (characteristic) {
+                        // ส่งคำสั่งพร้อมตัวเลขเวลาไปที่บอร์ด เช่น "SLOWSTOP:5" หรือ "SLOWSTOP:2.5"
+                        safeBleWrite("SLOWSTOP:" + endFadeTime, 'withoutResponse');
+                        
+                        // แอนิเมชันปุ่มบุ๋มลงไป
+                        const btn = document.getElementById('endSongBtn');
+                        btn.style.transform = 'scale(0.90)';
+                        btn.style.backgroundColor = 'white';
+                        btn.style.color = '#9333ea';
+                        setTimeout(() => { 
+                            btn.style.transform = 'none'; 
+                            btn.style.backgroundColor = '#9333ea'; 
+                            btn.style.color = 'white'; 
+                        }, 100);
+                    }
+                }, 300); // รอ 300 มิลลิวินาทีเผื่อจะโดนกดซ้ำ
             }
         }
        function remoteTapTempo(e) {
