@@ -948,13 +948,24 @@
             }
             
             editorTapTimes.push(now); 
-            if (editorTapTimes.length > 5) editorTapTimes.shift();
-            if (editorTapTimes.length > 1) {
+            // เพิ่มความจำจาก 5 เป็น 9 ครั้ง เพื่อให้มีข้อมูลกรองเยอะขึ้น
+            if (editorTapTimes.length > 9) editorTapTimes.shift();
+            
+            if (editorTapTimes.length > 2) { // ต้องมีอย่างน้อย 3 จังหวะถึงจะคำนวณได้นิ่ง
                 let diffs = [];
-                for (let i = 1; i < editorTapTimes.length; i++) diffs.push(editorTapTimes[i] - editorTapTimes[i - 1]);
-                let avgDiff = diffs.reduce((a, b) => a + b) / diffs.length;
-                let rawBpm = 60000 / avgDiff;
+                for (let i = 1; i < editorTapTimes.length; i++) {
+                    diffs.push(editorTapTimes[i] - editorTapTimes[i - 1]);
+                }
+                
+                // ทีเด็ด! ใช้สูตร "มัธยฐาน (Median)" เรียงลำดับความห่างแล้วหยิบตัวตรงกลางมาใช้
+                // วิธีนี้จะโยนจังหวะที่ "เบิ้ล(ไวไป)" หรือ "หลุด(ช้าไป)" ทิ้งไปเลยแบบอัตโนมัติ!
+                diffs.sort((a, b) => a - b);
+                let mid = Math.floor(diffs.length / 2);
+                let medianDiff = diffs.length % 2 !== 0 ? diffs[mid] : (diffs[mid - 1] + diffs[mid]) / 2;
+                
+                let rawBpm = 60000 / medianDiff;
                 let bpm = Math.round(rawBpm * 2) / 2; 
+                
                 if (bpm > 30 && bpm <= 200) {
                     editorBPM = bpm;
                     document.getElementById('editorBpmDisplay').innerText = editorBPM;
