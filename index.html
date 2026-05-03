@@ -864,22 +864,31 @@
             }
 
             try {
-                // ต้องชุบชีวิต AudioContext ให้ตื่นก่อนเปิดไมค์ (สำคัญมากสำหรับมือถือ)
                 if (audioCtx.state === 'suspended') {
                     await audioCtx.resume();
                 }
                 
-                // ขออนุญาตเปิดไมค์
-                autoBeatStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // สั่งปิดระบบปรับเสียงอัตโนมัติของเบราว์เซอร์ เพื่อรับเสียงสดๆ (Raw Audio)
+                const constraints = {
+                    audio: {
+                        echoCancellation: false,
+                        autoGainControl: false,
+                        noiseSuppression: false
+                    }
+                };
+                
+                autoBeatStream = await navigator.mediaDevices.getUserMedia(constraints);
                 const source = audioCtx.createMediaStreamSource(autoBeatStream);
                 
-                // กรองเอาแต่เบส (ตึ๊บๆ)
+                // กรองเฉพาะเบสหนักๆ (< 150Hz)
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = 'lowpass';
-                filter.frequency.value = 120; // เอาเฉพาะต่ำกว่า 120Hz
+                filter.frequency.value = 150; 
                 
                 const analyser = audioCtx.createAnalyser();
                 analyser.fftSize = 256; 
+                // เพิ่มความไวในการตอบสนอง
+                analyser.smoothingTimeConstant = 0.2; 
                 
                 source.connect(filter);
                 filter.connect(analyser);
@@ -887,7 +896,7 @@
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
                 isAutoBeatActive = true;
-                console.log("Auto Beat: 🟢 ON (Listening...)");
+                console.log("Auto Beat: 🟢 ON (Listening raw audio...)");
                 
                 bpmDisplay.classList.remove('text-white', 'border-gray-700');
                 bpmDisplay.classList.add('text-red-400', 'animate-pulse', 'border-red-500', 'shadow-[0_0_15px_red]');
@@ -901,17 +910,18 @@
                     for(let i=0; i<dataArray.length; i++) { sum += dataArray[i]; }
                     let avg = sum / dataArray.length;
                     
-                   // ปรับจูนความไวตรงนี้ครับ! ยิ่งเลขน้อย ไมค์ยิ่งหูไว (พี่เจลองลดให้เหลือ 80 ก่อน)
-                    // ถ้า 80 ยังนิ่ง ให้บังดุลลดเลขลงไปอีกเป็น 50 หรือ 30 เลยครับ
-                    if (avg > 30) { 
+                    // ปริ้นท์ค่าความดังออกหน้าคอนโซล (ถ้าบังดุลต่อคอม จะเห็นว่าเสียงดังขึ้นเท่าไหร่)
+                    // console.log("Bass Level:", avg); 
+                    
+                    // ปรับเกณฑ์กลับมาที่ 50 (ถ้าปิด AutoGain เสียงน่าจะเข้าแรงขึ้นเยอะครับ)
+                    if (avg > 50) { 
                         let now = Date.now();
-                        if (now - lastAutoBeatTime > 330) {
+                        // ลดดีเลย์กันกดเบิ้ลลงเหลือ 250ms ให้สับจังหวะได้ถี่ขึ้น
+                        if (now - lastAutoBeatTime > 250) {
                             lastAutoBeatTime = now;
                             
-                            // จำลองการเคาะ
                             remoteTapTempo(null);
                             
-                            // เด้งตัวเลข (พี่เจเพิ่มขนาดจาก 1.3 เป็น 1.6 ให้มันเด้งทะลุจอไปเลย จะได้สังเกตง่ายๆ)
                             bpmDisplay.style.transform = 'scale(1.6)';
                             setTimeout(() => bpmDisplay.style.transform = 'none', 100);
                         }
