@@ -853,27 +853,30 @@
             const bpmDisplay = document.getElementById('liveBpmDisplay');
             
             if (isAutoBeatActive) {
-                // ปิดระบบหูทิพย์
                 isAutoBeatActive = false;
                 if (autoBeatStream) autoBeatStream.getTracks().forEach(t => t.stop());
                 if (autoBeatAnimFrame) cancelAnimationFrame(autoBeatAnimFrame);
                 
                 bpmDisplay.classList.remove('animate-pulse', 'text-red-400', 'border-red-500', 'shadow-[0_0_15px_red]');
                 bpmDisplay.classList.add('text-white', 'border-gray-700');
+                console.log("Auto Beat: ❌ OFF");
                 return;
             }
 
-            // เปิดระบบหูทิพย์
             try {
-                if (audioCtx.state === 'suspended') await audioCtx.resume();
+                // ต้องชุบชีวิต AudioContext ให้ตื่นก่อนเปิดไมค์ (สำคัญมากสำหรับมือถือ)
+                if (audioCtx.state === 'suspended') {
+                    await audioCtx.resume();
+                }
                 
+                // ขออนุญาตเปิดไมค์
                 autoBeatStream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const source = audioCtx.createMediaStreamSource(autoBeatStream);
                 
-                // ใช้ Low-pass filter กรองเอาเฉพาะความถี่ต่ำ (เสียงเบส ต่ำกว่า 120Hz)
+                // กรองเอาแต่เบส (ตึ๊บๆ)
                 const filter = audioCtx.createBiquadFilter();
                 filter.type = 'lowpass';
-                filter.frequency.value = 120;
+                filter.frequency.value = 120; // เอาเฉพาะต่ำกว่า 120Hz
                 
                 const analyser = audioCtx.createAnalyser();
                 analyser.fftSize = 256; 
@@ -884,7 +887,8 @@
                 const dataArray = new Uint8Array(analyser.frequencyBinCount);
                 
                 isAutoBeatActive = true;
-                // เปลี่ยน UI เป็นสีแดงกระพริบให้รู้ว่าหูทิพย์ทำงานอยู่
+                console.log("Auto Beat: 🟢 ON (Listening...)");
+                
                 bpmDisplay.classList.remove('text-white', 'border-gray-700');
                 bpmDisplay.classList.add('text-red-400', 'animate-pulse', 'border-red-500', 'shadow-[0_0_15px_red]');
                 
@@ -893,24 +897,20 @@
                     
                     analyser.getByteFrequencyData(dataArray);
                     
-                    // หาค่าเฉลี่ยความดังของเสียงเบส
                     let sum = 0;
-                    for(let i=0; i<dataArray.length; i++) {
-                        sum += dataArray[i];
-                    }
+                    for(let i=0; i<dataArray.length; i++) { sum += dataArray[i]; }
                     let avg = sum / dataArray.length;
                     
-                    // ตั้งเกณฑ์ความดัง ถ้าพลังเบสพุ่งเกิน 170 (จากเต็ม 255) ให้ถือว่าเป็น 1 จังหวะ
-                    if (avg > 170) {
+                    // ปรับจูนความไว (Sensitivity) ตรงนี้ ถ้ามันไม่ยอมจับจังหวะ ให้ลดเลข 170 ลง (เช่น 150)
+                    if (avg > 150) { 
                         let now = Date.now();
-                        // ดักจับการกดเบิ้ล (Debounce) ป้องกันไฟรัวเกินไป (หน่วงอย่างน้อย 330ms)
                         if (now - lastAutoBeatTime > 330) {
                             lastAutoBeatTime = now;
                             
-                            // แอบเนียนสั่งทำงานเหมือนบังดุลเอานิ้วจิ้มปุ่ม TAP เอง!
+                            // จำลองการเคาะ
                             remoteTapTempo(null);
                             
-                            // ทำอนิเมชันให้ตัวเลขเด้งสู้วิถีเบส!
+                            // เด้งตัวเลข
                             bpmDisplay.style.transform = 'scale(1.3)';
                             setTimeout(() => bpmDisplay.style.transform = 'none', 100);
                         }
@@ -920,7 +920,8 @@
                 detectBeat();
                 
             } catch (err) {
-                alert("กรุณาอนุญาตให้สิทธิ์ใช้งานไมโครโฟน เพื่อใช้ระบบ Auto Beat ครับ!");
+                console.error("Auto Beat Error:", err);
+                alert("เกิดข้อผิดพลาดในการเปิดไมค์! โปรดตรวจสอบว่าเบราว์เซอร์อนุญาตให้ใช้ไมค์หรือไม่ (" + err.message + ")");
             }
         }
         // --- จบระบบ Auto Beat ---
