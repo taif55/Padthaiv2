@@ -183,12 +183,12 @@
 <body>
     <div id="mainView">
         
-       <div class="header-section mt-1 mb-1 !flex-none !py-2 flex justify-between items-center w-full">
+       <div class="header-section mt-1 mb-1 !flex-none !py-2 flex justify-between items-center w-full gap-1">
             
             <!-- ====== กรอบกลุ่ม 1: ฝั่งซ้าย (ตั้งค่า + กล้อง) ====== -->
-            <div class="flex items-center gap-3 shrink-0">
+            <div class="flex items-center gap-2 shrink-0 min-w-0">
                 <!-- แก๊งตั้งค่า (Power, Connect, Setting) -->
-                <div class="flex flex-col items-center gap-1 w-[60px]">
+                <div class="flex flex-col items-center gap-1 w-[60px] shrink-0">
                     <!-- แถบแสดงแบตเตอรี่ -->
                     <div class="flex flex-col items-center w-full">
                         <span id="powerLabel" class="text-[7px] text-gray-400 font-bold mb-[1px] leading-none">POWER</span>
@@ -207,8 +207,8 @@
                     </button>
                 </div>
 
-                <!-- กล้อง AI / ปุ่มโลโก้ -->
-                <button id="camToggleBtn" onclick="toggleCameraTap()" class="relative w-28 h-[4.5rem] bg-gray-900 border-2 border-gray-700 rounded-xl overflow-hidden shadow-inner flex-shrink-0 active:scale-95 transition flex items-center justify-center">
+                <!-- กล้อง AI / ปุ่มโลโก้ (ใส่ shrink ให้มันหดตัวได้เมื่อโดนบีบ) -->
+                <button id="camToggleBtn" onclick="toggleCameraTap()" class="relative w-28 max-w-[112px] h-[4.5rem] bg-gray-900 border-2 border-gray-700 rounded-xl overflow-hidden shadow-inner shrink transition flex items-center justify-center min-w-[50px]">
                     <div id="titleText" class="text-[11px] font-black text-white italic uppercase tracking-wider text-center leading-tight drop-shadow-md">
                         Pocket DJ<br><span class="text-orange-500">PADTHAI</span>
                     </div>
@@ -219,23 +219,27 @@
             </div>
 
             <!-- ====== กรอบกลุ่ม 2: ฝั่งขวา (คุมจังหวะ) ====== -->
-            <div class="flex flex-col items-end justify-between h-[4.5rem] py-0.5 min-w-0">
+            <!-- ล็อกกล่องนี้ด้วย shrink-0 ไม่ให้หดไปทับกล้อง -->
+            <div class="flex flex-col items-end justify-between h-[4.5rem] py-0.5 shrink-0">
                 <!-- แถวบน: พื้นที่ว่างเผื่ออนาคต -->
                 <div class="flex items-center w-full justify-end h-[20px]">
-                    <div class="flex items-center space-x-1">
-                        <button onclick="globalShiftRoom(-1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1.5">
+                    <div class="flex items-center space-x-1 shrink-0">
+                        <button onclick="globalShiftRoom(-1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1">
                             <span class="text-[12px] text-green-500">◀</span> SLOW
                         </button>
-                        <button onclick="globalShiftRoom(1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1.5">
+                        <button onclick="globalShiftRoom(1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1">
                             FAST <span class="text-[12px] text-red-500">▶</span>
                         </button>
                     </div>
-</div>
+                </div>
                 <!-- แถวล่าง: กลุ่มปุ่มจังหวะ (END, BPM, TAP) -->
-                <div class="flex items-center space-x-1.5 justify-end">
-                    <button id="endSongBtn" onclick="triggerEndSong()" class="bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1.5 rounded-lg text-[9px] font-black shadow-[0_0_8px_rgba(147,51,234,0.4)] active:scale-95 transition flex items-center justify-center shrink-0 tracking-widest">END</button>
-                    <span id="liveBpmDisplay" class="text-[13px] text-orange-400 font-black px-2 py-1 rounded-lg border border-gray-700 bg-gray-800 cursor-pointer shrink-0 text-center shadow-inner">128</span>
-                    <button id="bgTapBtn" onpointerdown="remoteTapTempo(event)" class="bg-orange-600 hover:bg-orange-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-black shadow-[0_0_8px_rgba(234,88,12,0.4)] active:scale-95 transition flex items-center justify-center shrink-0">TAP</button>
+                <div class="flex items-center space-x-1 justify-end shrink-0 w-full mt-1">
+                    <button id="endSongBtn" onclick="triggerEndSong()" class="bg-purple-600 hover:bg-purple-500 text-white px-2 py-1.5 rounded-lg text-[9px] font-black shadow-[0_0_8px_rgba(147,51,234,0.4)] active:scale-95 transition flex items-center justify-center shrink-0 tracking-widest">END</button>
+                    
+                    <!-- เปลี่ยนสีตัวเลข BPM จากส้มเป็นสีขาว (text-white) ตรงนี้ครับ -->
+                    <span id="liveBpmDisplay" class="text-[13px] text-white font-black px-2 py-1 rounded-lg border border-gray-700 bg-gray-800 cursor-pointer shrink-0 text-center shadow-inner">128</span>
+                    
+                    <button id="bgTapBtn" onpointerdown="remoteTapTempo(event)" class="bg-orange-600 hover:bg-orange-500 text-white px-2.5 py-1.5 rounded-lg text-[10px] font-black shadow-[0_0_8px_rgba(234,88,12,0.4)] active:scale-95 transition flex items-center justify-center shrink-0">TAP</button>
                 </div>
             </div>
             
