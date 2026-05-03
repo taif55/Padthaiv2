@@ -222,9 +222,15 @@
             <div class="flex flex-col items-end justify-between h-[4.5rem] py-0.5 min-w-0">
                 <!-- แถวบน: พื้นที่ว่างเผื่ออนาคต -->
                 <div class="flex items-center w-full justify-end h-[20px]">
-                    <!-- ใส่ปุ่มเพิ่มตรงนี้ได้เลย! -->
-                </div>
-
+                    <div class="flex items-center space-x-1">
+                        <button onclick="globalShiftRoom(-1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1.5">
+                            <span class="text-[12px] text-green-500">◀</span> SLOW
+                        </button>
+                        <button onclick="globalShiftRoom(1)" class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-1 rounded-lg border border-gray-600 text-[10px] font-black shadow-[0_0_8px_rgba(0,0,0,0.5)] active:scale-95 transition flex items-center gap-1.5">
+                            FAST <span class="text-[12px] text-red-500">▶</span>
+                        </button>
+                    </div>
+</div>
                 <!-- แถวล่าง: กลุ่มปุ่มจังหวะ (END, BPM, TAP) -->
                 <div class="flex items-center space-x-1.5 justify-end">
                     <button id="endSongBtn" onclick="triggerEndSong()" class="bg-purple-600 hover:bg-purple-500 text-white px-2.5 py-1.5 rounded-lg text-[9px] font-black shadow-[0_0_8px_rgba(147,51,234,0.4)] active:scale-95 transition flex items-center justify-center shrink-0 tracking-widest">END</button>
@@ -1068,6 +1074,51 @@ let sclDragBaseVal = 3;
             if (v <= 5) return 1 - (v - 4) * 0.5;
             return 0.5 - (v - 5) * 0.25;
         }
+            // ฟังก์ชันสับเปลี่ยน Room ทั้ง 3 เลเยอร์พร้อมกัน (Master Shift) ลื่นๆ ไม่สะดุด
+        function globalShiftRoom(direction) {
+            // direction: -1 (ลดความเร็วไปทางซ้าย), 1 (เพิ่มความเร็วไปทางขวา)
+            
+            const shiftLayer = (layer, sliderId, btnClass, activeBaseColor, activeBorderColor) => {
+                let baseVal = (layer === 'BG') ? sclDragBaseVal : (layer === 'FG' ? sclDragBaseValFG : sclDragBaseValSP);
+                let currentIdx = Math.round(baseVal);
+                let newIdx = Math.max(0, Math.min(6, currentIdx + direction));
+                
+                if(newIdx === currentIdx) return; // ตันขอบแล้ว ไม่ขยับต่อ
+
+                // 1. อัปเดตค่าความจำ
+                if (layer === 'BG') sclDragBaseVal = newIdx;
+                else if (layer === 'FG') sclDragBaseValFG = newIdx;
+                else if (layer === 'SP') sclDragBaseValSP = newIdx;
+                
+                // 2. อัปเดตแถบสไลเดอร์
+                document.getElementById(sliderId).value = newIdx;
+                
+                // 3. เปลี่ยนสีปุ่มที่ถูกเลือก (สลับ UI)
+                let btns = document.querySelectorAll('.' + btnClass);
+                btns.forEach((btn, idx) => {
+                    if (idx === newIdx) {
+                        btn.className = `${btnClass} ${activeBaseColor} text-white py-1 rounded-lg border ${activeBorderColor} text-[11px] font-black transition shadow-[0_0_8px_rgba(255,255,255,0.4)] sync-blink${layer==='BG'?'':'-'+layer.toLowerCase()}`;
+                    } else {
+                        btn.className = `${btnClass} bg-gray-800 ${layer==='BG'?'text-green-400':(layer==='FG'?'text-blue-400':'text-pink-400')} py-1 rounded-lg border border-gray-600 text-[11px] font-bold active:bg-gray-700 transition`;
+                    }
+                });
+                
+                // 4. สั่งบอร์ดทำงานแบบลัดคิว (ข้ามการบันทึก)
+                let targetBeats = getBeatsFromSlider(newIdx);
+                remoteEditAction(layer, () => setRoomScale(targetBeats), false);
+                let cmdPrefix = (layer === 'BG') ? 'speedBG' : (layer === 'FG' ? 'speedFG' : 'speedSP');
+                let tCmd = (layer === 'BG') ? 'T1.00' : (layer === 'FG' ? 'FGT1.00' : 'SPT1.00');
+                throttledBleWrite(cmdPrefix, tCmd, 'withoutResponse', 50);
+            };
+
+            // สั่งรันเรียงตัวทั้ง 3 เลเยอร์
+            shiftLayer('BG', 'liveSpeedSlider', 'room-btn', 'bg-green-700', 'border-green-500');
+            shiftLayer('FG', 'liveSpeedSliderFG', 'room-btn-fg', 'bg-blue-700', 'border-blue-500');
+            shiftLayer('SP', 'liveSpeedSliderSP', 'room-btn-sp', 'bg-pink-700', 'border-pink-500');
+            
+            if (navigator.vibrate) navigator.vibrate(30);
+        }
+        
 // ---- ชุดควบคุมของ FOREGROUND (FG) ----
         let sclDragBaseValFG = 3;
 
