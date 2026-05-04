@@ -604,6 +604,82 @@
             document.documentElement.style.setProperty('--beat-duration', dur + 's');
         }
 
+       // --- เริ่มระบบ Quick BPM Selector ---
+        let bpmClickCount = 0;
+        
+        // ฟังก์ชันแยกคลิกเดียว (เปิด Popup) กับ ดับเบิลคลิก (เปิด Auto Beat)
+        function handleBpmClick() {
+            bpmClickCount++;
+            setTimeout(() => {
+                if (bpmClickCount === 1) openBpmModal();
+                bpmClickCount = 0;
+            }, 250);
+        }
+
+        function openBpmModal() {
+            document.getElementById('bpmModal').classList.remove('hidden');
+            renderBpmGrid();
+        }
+
+        function closeBpmModal() {
+            document.getElementById('bpmModal').classList.add('hidden');
+        }
+
+        function applySelectedBpm(bpm) {
+            editorBPM = bpm;
+            document.getElementById('editorBpmDisplay').innerText = editorBPM;
+            document.getElementById('liveBpmDisplay').innerText = editorBPM;
+            updateBeatDuration();
+            
+            // สั่งอัปเดตสเกลและส่งไปบอร์ด ESP32 ทันที!
+            if (!document.getElementById('modal').classList.contains('hidden')) {
+                updateGridBackground();
+                snapLoopToGrid(); 
+                fitToScreen(); 
+                restartPlayhead();
+            } else {
+                if (activeIdxBG !== -1) {
+                    remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)), false);
+                    throttledBleWrite('speedBG', "T1.00", 'withoutResponse', 50);
+                }
+                if (activeIdxFG !== -1) {
+                    remoteEditAction('FG', () => setRoomScale(getBeatsFromSlider(sclDragBaseValFG)), false);
+                    throttledBleWrite('speedFG', "FGT1.00", 'withoutResponse', 50);
+                }
+                if (activeIdxSP !== -1) {
+                    remoteEditAction('SP', () => setRoomScale(getBeatsFromSlider(sclDragBaseValSP)), false);
+                    throttledBleWrite('speedSP', "SPT1.00", 'withoutResponse', 50);
+                }
+            }
+            renderBpmGrid(); // อัปเดตสีปุ่มให้รู้ว่าใช้อันไหนอยู่
+        }
+
+        function renderBpmGrid() {
+            const grid = document.getElementById('bpmGrid');
+            grid.innerHTML = '';
+            const currentIntBpm = Math.round(editorBPM);
+            let activeBtn = null;
+            
+            for (let b = 30; b <= 179; b++) {
+                const btn = document.createElement('button');
+                if (b === currentIntBpm) {
+                    btn.className = 'bg-orange-600 text-white font-black text-[10px] py-2 rounded shadow-[0_0_10px_rgba(234,88,12,0.8)] border border-orange-400 transform scale-110 z-10';
+                    activeBtn = btn;
+                } else {
+                    btn.className = 'bg-gray-800 text-gray-400 font-bold text-[10px] py-2 rounded border border-gray-700 active:bg-gray-600 transition';
+                }
+                btn.innerText = b;
+                btn.onclick = () => applySelectedBpm(b);
+                grid.appendChild(btn);
+            }
+            
+            // Auto-scroll ลงไปหาความเร็วปัจจุบันให้เอง (หน่วงนิดนึงให้กล่องโผล่ก่อน)
+            if (activeBtn) {
+                setTimeout(() => activeBtn.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+        }
+        // --- จบระบบ Quick BPM Selector ---
+
        function setActiveScaleBtn(btn) {
             if (!btn) return;
             let scaleText = btn.innerText.trim();
@@ -2571,40 +2647,6 @@ if (val === "DONE_ALL") {
                     }
                 });
 
-                interact('#editorBpmDisplay').on('hold', function (event) {
-                    let input = prompt("ตั้งค่า Tempo (BPM) ใหม่สำหรับหน้า Edit:", editorBPM);
-                    if (input !== null) {
-                        let bpm = parseInt(input);
-                        if (!isNaN(bpm) && bpm >= 30 && bpm <= 200) {
-                            editorBPM = bpm;
-                            document.getElementById('editorBpmDisplay').innerText = editorBPM;
-                            document.getElementById('liveBpmDisplay').innerText = editorBPM;
-                            updateBeatDuration();
-                            updateGridBackground();
-                            snapLoopToGrid(); 
-                            fitToScreen(); 
-                            restartPlayhead();
-                        } else {
-                            alert("กรุณาใส่ตัวเลขระหว่าง 30 - 200");
-                        }
-                    }
-                });
-                
-                interact('#liveBpmDisplay').on('hold', function (event) {
-                    let input = prompt("ตั้งค่า Tempo (BPM) ใหม่สำหรับหน้า Live BG:", editorBPM);
-                    if (input !== null) {
-                        let bpm = parseInt(input);
-                        if (!isNaN(bpm) && bpm >= 30 && bpm <= 200) {
-                            editorBPM = bpm;
-                            document.getElementById('editorBpmDisplay').innerText = editorBPM;
-                            document.getElementById('liveBpmDisplay').innerText = editorBPM;
-                            updateBeatDuration(); 
-                            remoteEditAction('BG', () => { snapLoopToGrid(); });
-                        } else {
-                            alert("กรุณาใส่ตัวเลขระหว่าง 30 - 200");
-                        }
-                    }
-                });
             } catch (err) { alert("เกิดข้อผิดพลาด: " + err.message); }
         };
     </script>
