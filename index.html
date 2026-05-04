@@ -454,14 +454,18 @@
         </div>
     </div>
 
-    <!-- NEW: Modal สำหรับเลือก BPM แบบรวดเร็ว (ไม่ต้องพิมพ์เอง) -->
+   <!-- NEW: Modal สำหรับเลือก BPM แบบรวดเร็ว (ไม่ต้องพิมพ์เอง) -->
     <div id="bpmModal" class="fixed inset-0 hidden z-[70] modal-overlay flex items-center justify-center p-2" onclick="if(event.target.id === 'bpmModal') closeBpmModal()">
-        <div class="bg-[#050505] border border-orange-500 rounded-xl p-3 w-full max-w-sm max-h-[70vh] shadow-[0_0_30px_rgba(234,88,12,0.2)] flex flex-col relative">
-            <div class="flex justify-between items-center mb-2 flex-none">
-                <h3 class="text-orange-500 font-black text-xs uppercase tracking-widest flex items-center gap-1"><span>⏱️</span> QUICK BPM SELECT</h3>
-                <button onclick="closeBpmModal()" class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1 rounded text-xs font-bold border border-gray-600 transition shadow">CLOSE</button>
+        <div class="bg-[#050505] border border-orange-500 rounded-xl p-3 w-full max-w-sm max-h-[75vh] shadow-[0_0_30px_rgba(234,88,12,0.2)] flex flex-col relative">
+            <div class="flex justify-between items-center mb-2 flex-none gap-2">
+                <h3 class="text-orange-500 font-black text-[10px] uppercase tracking-widest flex items-center gap-1"><span>⏱️</span> QUICK BPM</h3>
+                <div class="flex items-center gap-2">
+                    <button id="modalTapBtn" onpointerdown="remoteTapTempo(event)" class="bg-orange-600 hover:bg-orange-500 text-white px-5 py-1.5 rounded text-[10px] font-black shadow-[0_0_8px_rgba(234,88,12,0.5)] active:scale-95 transition">TAP</button>
+                    <button onclick="closeBpmModal()" class="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded text-[10px] font-bold border border-gray-600 transition shadow">CLOSE</button>
+                </div>
             </div>
-            <div id="bpmGrid" class="grid grid-cols-10 gap-1 overflow-y-auto pr-1 flex-1 min-h-0 pad-container pb-4">
+            <!-- ปรับลดช่องว่าง (gap) และลด padding ให้ปุ่มอัดแน่นขึ้น -->
+            <div id="bpmGrid" class="grid grid-cols-10 gap-0.5 overflow-y-auto pr-1 flex-1 min-h-0 pad-container pb-2">
                 <!-- ปุ่มจะถูกสร้างด้วย Javascript สดๆ -->
             </div>
         </div>
@@ -646,7 +650,7 @@
             renderBpmGrid(); 
         }
 
-        function renderBpmGrid() {
+       function renderBpmGrid() {
             const grid = document.getElementById('bpmGrid');
             grid.innerHTML = '';
             const currentIntBpm = Math.round(editorBPM);
@@ -655,10 +659,12 @@
             for (let b = 30; b <= 179; b++) {
                 const btn = document.createElement('button');
                 if (b === currentIntBpm) {
-                    btn.className = 'bg-orange-600 text-white font-black text-[10px] py-2 rounded shadow-[0_0_10px_rgba(234,88,12,0.8)] border border-orange-400 transform scale-110 z-10';
+                    // เปลี่ยน py-2 เป็น py-1 ให้ปุ่มเตี้ยลง
+                    btn.className = 'bg-orange-600 text-white font-black text-[10px] py-1 rounded shadow-[0_0_10px_rgba(234,88,12,0.8)] border border-orange-400 transform scale-110 z-10';
                     activeBtn = btn;
                 } else {
-                    btn.className = 'bg-gray-800 text-gray-400 font-bold text-[10px] py-2 rounded border border-gray-700 active:bg-gray-600 transition';
+                    // เปลี่ยน py-2 เป็น py-1 ให้ปุ่มเตี้ยลง
+                    btn.className = 'bg-gray-800 text-gray-400 font-bold text-[10px] py-1 rounded border border-gray-700 active:bg-gray-600 transition';
                 }
                 btn.innerText = b;
                 btn.onclick = () => applySelectedBpm(b);
@@ -1067,6 +1073,11 @@
                     
                     updateBeatDuration(); 
 
+                    // อัปเดตตารางปุ่ม BPM สีส้มแบบ Real-time ถ้าเราเปิดหน้าต่างค้างไว้อยู่
+                    if (!document.getElementById('bpmModal').classList.contains('hidden')) {
+                        renderBpmGrid();
+                    }
+
                     if (editorTapTimeout) clearTimeout(editorTapTimeout);
                     
                     // ตั้งเวลาหน่วงตายตัวที่ 800ms (0.8วิ) พอหยุดเคาะปุ๊บ ไฟเปลี่ยนปั๊บ
@@ -1077,7 +1088,7 @@
                             setTimeout(() => { safeBleWrite("B:" + currentBrt.toFixed(2)); }, 150);
                         }
 
-    if (activeIdxBG !== -1) {
+                        if (activeIdxBG !== -1) {
                             remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)), false);
                             throttledBleWrite('speedBG', "T1.00", 'withoutResponse', 50);
                         }
@@ -1092,107 +1103,17 @@
                     }, 800);
                 }
             }
-            const btn = document.getElementById('bgTapBtn');
-            if (btn) {
-                btn.style.transform = 'scale(0.90)';
-                btn.style.backgroundColor = 'white';
-                btn.style.color = '#ea580c';
-                setTimeout(() => { btn.style.transform = 'none'; btn.style.backgroundColor = '#ea580c'; btn.style.color = 'white'; }, 100);
-            }
-        }
-        function snapLoopToGrid() {
-            let maxT = 0;
-            clips.forEach(c => { let end = c.start + c.duration; if (end > maxT) maxT = end; });
             
-            if (maxT > 0) {
-                let beatTime = 60 / editorBPM;
-                let nearestBeat = Math.round(maxT / beatTime) * beatTime;
-                if (nearestBeat <= 0) nearestBeat = beatTime; 
-                
-                let actualRatio = nearestBeat / maxT;
-                
-                if (actualRatio !== 1.0) {
-                    clips.forEach(c => { 
-                        c.start = c.start * actualRatio; 
-                        c.duration = c.duration * actualRatio; 
-                    });
+            // เด้งปุ่ม TAP ทุกปุ่มให้ยุบตัวลงไปพร้อมกันเป็น Feedback ภาพ
+            ['bgTapBtn', 'editorTapBtn', 'modalTapBtn'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.style.transform = 'scale(0.90)';
+                    btn.style.backgroundColor = 'white';
+                    btn.style.color = '#ea580c';
+                    setTimeout(() => { btn.style.transform = 'none'; btn.style.backgroundColor = '#ea580c'; btn.style.color = 'white'; }, 100);
                 }
-            }
-        }
-
-        function restartPlayhead() {
-            if(isPlaying) {
-                playheadTime = 0;
-                startAnimateTime = performance.now();
-                sendFullCodeToBT(); 
-            } else {
-                playheadTime = 0;
-                document.getElementById('playhead').style.left = '0px';
-                const vp = document.getElementById('timelineViewport');
-                vp.scrollLeft = 0;
-            }
-        }
-
-        function editorTapTempo(e) {
-            if(e) e.preventDefault();
-            const now = Date.now();
-            
-            // ป้องกันจังหวะเพี้ยน: ถ้าทิ้งช่วงไม่ได้เคาะนานเกิน 2 วินาที ให้ล้างค่าเหมือนกัน
-            if (editorTapTimes.length > 0 && now - editorTapTimes[editorTapTimes.length - 1] > 2000) {
-                editorTapTimes = [];
-            }
-            
-            editorTapTimes.push(now);
-            if (editorTapTimes.length > 5) editorTapTimes.shift();
-            if (editorTapTimes.length > 1) {
-                let diffs = [];
-                for (let i = 1; i < editorTapTimes.length; i++) diffs.push(editorTapTimes[i] - editorTapTimes[i - 1]);
-                let avgDiff = diffs.reduce((a, b) => a + b) / diffs.length;
-                let rawBpm = 60000 / avgDiff;
-                let bpm = Math.round(rawBpm * 2) / 2; 
-                if (bpm > 30 && bpm <= 200) {
-                    editorBPM = bpm;
-                    document.getElementById('editorBpmDisplay').innerText = editorBPM;
-                    document.getElementById('liveBpmDisplay').innerText = editorBPM;
-                    
-                    updateBeatDuration(); 
-                    
-                    if (editorTapTimeout) clearTimeout(editorTapTimeout);
-                    
-                    // ตั้งเวลาหน่วงตายตัวที่ 800ms
-                    editorTapTimeout = setTimeout(() => {
-                        if (!document.getElementById('modal').classList.contains('hidden')) {
-                            let targetBeats = 4;
-                            if (activeLayer === 'BG') targetBeats = getBeatsFromSlider(sclDragBaseVal);
-                            else if (activeLayer === 'FG') targetBeats = getBeatsFromSlider(sclDragBaseValFG);
-                            else if (activeLayer === 'SP') targetBeats = getBeatsFromSlider(sclDragBaseValSP);
-                            
-                            setRoomScale(targetBeats); 
-                            // ฟังก์ชัน setRoomScale ด้านในจะทำหน้าที่รีเฟรชหน้าจอและสัดส่วนคลิปทั้งหมดให้เอง
-                        } else {
-                       if (activeIdxBG !== -1) {
-                                remoteEditAction('BG', () => setRoomScale(getBeatsFromSlider(sclDragBaseVal)), false);
-                                throttledBleWrite('speedBG', "T1.00", 'withoutResponse', 50);
-                            }
-                            if (activeIdxFG !== -1) {
-                                remoteEditAction('FG', () => setRoomScale(getBeatsFromSlider(sclDragBaseValFG)), false);
-                                throttledBleWrite('speedFG', "FGT1.00", 'withoutResponse', 50);
-                            }
-                            if (activeIdxSP !== -1) {
-                                remoteEditAction('SP', () => setRoomScale(getBeatsFromSlider(sclDragBaseValSP)), false);
-                                throttledBleWrite('speedSP', "SPT1.00", 'withoutResponse', 50);
-                            }
-                        }
-                    }, 800);
-                }
-            }
-            const btn = document.getElementById('editorTapBtn');
-            if (btn) {
-                btn.style.transform = 'scale(0.95)';
-                btn.style.backgroundColor = 'white';
-                btn.style.color = '#ea580c';
-                setTimeout(() => { btn.style.transform = 'none'; btn.style.backgroundColor = '#ea580c'; btn.style.color = 'white'; }, 100);
-            }
+            });
         }
 
         function setRoomScale(beats) {
