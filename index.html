@@ -885,7 +885,7 @@
             selectedIdx = prevIdx;
             clips = []; 
         }
-        let endFadeTime = 5; // ค่าเริ่มต้นให้ค่อยๆ ดับใน 5 วินาที
+        let endFadeTime = 0.5; // ปรับค่าเริ่มต้นจาก 5 เป็น 0.5 วินาทีเรียบร้อยครับ!
         let endBtnClickTimer = null;
         
         function triggerEndSong() {
@@ -910,7 +910,7 @@
                     endBtnClickTimer = null; // รีเซ็ต timer
                     
                     if (characteristic) {
-                        // ส่งคำสั่งพร้อมตัวเลขเวลาไปที่บอร์ด เช่น "SLOWSTOP:5" หรือ "SLOWSTOP:2.5"
+                        // ส่งคำสั่งพร้อมตัวเลขเวลาไปที่บอร์ด เช่น "SLOWSTOP:0.5"
                         safeBleWrite("SLOWSTOP:" + endFadeTime, 'withoutResponse');
                         
                         // แอนิเมชันปุ่มบุ๋มลงไป
