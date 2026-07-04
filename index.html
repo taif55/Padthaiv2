@@ -434,17 +434,11 @@
             </div>
         </div>
 
-        <div class="fixed bottom-0 w-full bg-gray-950 border-t-2 border-green-500 p-3 flex justify-between items-center z-50 shadow-[0_-5px_20px_rgba(0,255,0,0.1)] gap-2">
-            <button onclick="copyPadAndExit()" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-xl text-xs font-black shadow-[0_0_10px_rgba(37,99,235,0.5)] transition active:scale-95 flex items-center justify-center gap-1 tracking-widest">
-                <span>📋</span> COPY
-            </button>
-            <button id="pastePadBtn" onclick="pastePad()" class="flex-1 bg-gray-800 border border-gray-700 text-gray-500 py-2 rounded-xl text-xs font-black transition active:scale-95 flex items-center justify-center gap-1 tracking-widest" disabled>
-                <span>📥</span> PASTE
-            </button>
-            
-            <button onclick="openCodeModal()" class="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 text-green-400 flex items-center justify-center shrink-0 active:scale-95 shadow">
-                <span class="text-[10px]">⌨️</span>
-            </button>
+        <div class="fixed bottom-0 w-full bg-gray-950 border-t-2 border-green-500 p-3 flex justify-between items-center z-50 shadow-[0_-5px_20px_rgba(0,255,0,0.1)] cursor-pointer active:bg-gray-900" onclick="openCodeModal()">
+            <div class="flex items-center space-x-2 w-full">
+                <span class="text-[10px] text-green-400 font-bold bg-green-900/50 px-2 py-1 rounded">CODE</span>
+                <div id="liveCode" class="text-[12px] font-mono text-green-400 overflow-hidden whitespace-nowrap text-ellipsis flex-1 font-bold tracking-widest pointer-events-none drop-shadow-[0_0_5px_#00e676]">...</div>
+            </div>
         </div>
     </div>
 
@@ -606,100 +600,7 @@
         let stateHistory = [];
         let stateIndex = -1;
         let isNavigatingHistory = false;
-let padClipboard = null; // ตัวแปรเก็บโค้ดไฟที่ถูกก็อปปี้ไว้ในหน่วยความจำ
 
-        // 1. ฟังก์ชันก็อปปี้แล้วเด้งกลับไปหน้า Index ทันที
-        function copyPadAndExit() {
-            padClipboard = generateCodeStr(); // ดูดโค้ดทั้งหมดของ Pad นี้
-            
-            if (navigator.vibrate) navigator.vibrate(50);
-            
-            // เด้งกลับไปหน้า Index
-            handleBack(); 
-            
-            // แอบอัปเดตปุ่ม Paste ให้พร้อมใช้งานสำหรับการเปิดหน้า Edit ครั้งต่อไป
-            const pasteBtn = document.getElementById('pastePadBtn');
-            if(pasteBtn) {
-                pasteBtn.disabled = false;
-                pasteBtn.className = "flex-1 bg-green-600 hover:bg-green-500 text-black py-2 rounded-xl text-xs font-black shadow-[0_0_15px_rgba(22,163,74,0.6)] transition active:scale-95 flex items-center justify-center gap-1 tracking-widest";
-            }
-        }
-
-        // 2. ฟังก์ชันแปะวาง (ล้างของเก่า ใส่ของใหม่ อัปเดตบอร์ด)
-        function pastePad() {
-            if (!padClipboard) return;
-            
-            // ทำให้ปุ่ม Paste กลับไปเป็นสีเทา (ห้ามแปะซ้ำรัวๆ)
-            const pasteBtn = document.getElementById('pastePadBtn');
-            pasteBtn.disabled = true;
-            pasteBtn.className = "flex-1 bg-gray-800 border border-gray-700 text-gray-500 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-1 tracking-widest";
-            pasteBtn.innerHTML = `<span>✅</span> PASTED!`;
-            setTimeout(() => {
-                pasteBtn.innerHTML = `<span>📥</span> PASTE`;
-            }, 1000);
-
-            // แปลงโค้ดจาก Clipboard กลับเป็นก้อนไฟ
-            clips = []; // เคลียร์คลิปเก่าทิ้งทั้งหมด
-            let brackets = padClipboard.match(/m?\(([^)]+)\)/g);
-            if (brackets) {
-                brackets.forEach((bracket, i) => {
-                    let m = bracket.startsWith('m');
-                    let content = bracket.replace('m','').replace('(','').replace(')','').split(',');
-                    if(content.length >= 4) {
-                        let s_val, b_val;
-                        if (content[0].length === 5) {
-                            s_val = parseInt(content[0].substring(0,3))/100;
-                            b_val = parseInt(content[0].substring(3,5));
-                        } else {
-                            s_val = parseInt(content[0].substring(0,2))/10;
-                            b_val = parseInt(content[0].substring(2,4));
-                        }
-                        
-                        let d_val;
-                        if (content[3].length >= 6) {
-                            d_val = Math.max(0.01, parseInt(content[3].substring(1,4))/100);
-                        } else {
-                            d_val = Math.max(0.1, parseInt(content[3].substring(1,3))/10);
-                        }
-
-                        clips.push({ 
-                            id: Date.now() + i, 
-                            start: s_val, 
-                            bright: b_val, 
-                            target: expandLEDs(content[1]), 
-                            color: content[2], 
-                            fx: content[3].charAt(0), 
-                            duration: d_val, 
-                            loop: 1, mirror: m, track: i % 8 
-                        });
-                    }
-                });
-            }
-            
-            // เซฟประวัติเพื่อให้ Undo ได้
-            stateHistory = []; stateIndex = -1; saveState();
-            
-            // อัปเดต UI บนไทม์ไลน์
-            renderClips();
-            updateLoopLine();
-            fitToScreen();
-            
-            // ปลุกหน้าจอให้คลิปแรกถูกเลือก เพื่อให้สไลเดอร์และเมนูสว่างขึ้นมา
-            if (clips.length > 0) {
-                selectClip(clips[0].id);
-            } else {
-                selectedClipId = null;
-                document.getElementById('editorPanel').style.opacity = "0.3";
-                document.getElementById('editorPanel').style.pointerEvents = "none";
-            }
-            
-            // ส่งคำสั่งไฟใหม่เข้า ESP32 ทันที!
-            sendFullCodeToBT();
-            
-            if (navigator.vibrate) navigator.vibrate([50, 50]);
-            
-            padClipboard = null; // ล้าง Clipboard ทิ้ง
-        }
         function updateBeatDuration() {
             let dur = 60 / editorBPM;
             document.documentElement.style.setProperty('--beat-duration', dur + 's');
@@ -1994,17 +1895,10 @@ if (val === "DONE_ALL") {
                 initColors(); 
                 updateGridBackground(); 
                 renderClips();
-                // ปลุก UI ให้ทำงานถ้ามีก้อนไฟ
-                if (clips.length > 0) {
-                    selectClip(clips[0].id);
-                } else {
-                    selectedClipId = null;
-                    document.getElementById('editorPanel').style.opacity = "0.3";
-                    document.getElementById('editorPanel').style.pointerEvents = "none";
-                }
+                if(clips.length > 0) selectClip(clips[0].id);
                 
                 updateLoopLine();
-                fitToScreen();
+                fitToScreen(); 
                 
                 if(!isPlaying) {
                     document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
@@ -2065,7 +1959,7 @@ if (val === "DONE_ALL") {
             }
         }
 
-       function toggleFollow() {
+        function toggleFollow() {
             isFollowingPlayhead = !isFollowingPlayhead;
             const btn = document.getElementById('followBtn');
             if(isFollowingPlayhead) {
@@ -2073,16 +1967,10 @@ if (val === "DONE_ALL") {
                 if(isPlaying) {
                     const vp = document.getElementById('timelineViewport');
                     vp.dataset.ignoreScroll = "true";
-                    try {
-                        vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
-                    } catch(e) {
-                        vp.scrollLeft = playheadTime * pxPerSec;
-                    }
+                    vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
                     setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 300);
                 }
-            } else { 
-                btn.className = "bg-gray-700 text-white px-2 py-1.5 rounded-lg text-[9px] font-bold flex-none"; 
-            }
+            } else { btn.className = "bg-gray-700 text-white px-2 py-1.5 rounded-lg text-[9px] font-bold flex-none"; }
         }
 
         function updateZoom(val) { 
@@ -2097,6 +1985,7 @@ if (val === "DONE_ALL") {
                 document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
             }
         }
+
         function applySpeedScale(val) {
             let scaleRatio = parseFloat(val);
             if (scaleRatio === 1.0) return; 
@@ -2295,35 +2184,20 @@ if (val === "DONE_ALL") {
         }
 
         function selectClip(id) {
-            selectedClipId = id; 
-            const c = clips.find(x => x.id === id);
-            
-            if (!c) return; // ป้องกัน Error ถ้าหาคลิปไม่เจอ
-
-            document.getElementById('editorPanel').style.opacity = "1"; 
-            document.getElementById('editorPanel').style.pointerEvents = "auto";
-            document.getElementById('cBright').value = c.bright; 
-            document.getElementById('cFX').value = c.fx;
-            activeColorIndex = -1; 
-            
-            updateMirrorUI(c.mirror); 
-            renderLEDGrid(); 
-            renderColorBuilderSlots();
+            selectedClipId = id; const c = clips.find(x => x.id === id);
+            document.getElementById('editorPanel').style.opacity = "1"; document.getElementById('editorPanel').style.pointerEvents = "auto";
+            document.getElementById('cBright').value = c.bright; document.getElementById('cFX').value = c.fx;
+            activeColorIndex = -1; updateMirrorUI(c.mirror); renderLEDGrid(); renderColorBuilderSlots();
             
             document.querySelectorAll('.light-clip').forEach(el => {
-                if (el.id === `clip-${id}`) el.classList.add('selected'); 
-                else el.classList.remove('selected');
+                if (el.id === `clip-${id}`) el.classList.add('selected'); else el.classList.remove('selected');
             });
             
             if(!isPlaying) {
                 playheadTime = c.start;
                 const vp = document.getElementById('timelineViewport');
                 vp.dataset.ignoreScroll = "true";
-               try {
-                    vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
-                } catch(e) {
-                    vp.scrollLeft = playheadTime * pxPerSec;
-                }
+                vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
                 setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 500);
                 document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
                 document.getElementById('timeText').innerText = `PLAYHEAD: ${playheadTime.toFixed(1)}s / END: ${currentLoopLimit.toFixed(1)}s`;
@@ -2504,11 +2378,7 @@ if (val === "DONE_ALL") {
             cancelAnimationFrame(playInterval); 
             const vp = document.getElementById('timelineViewport');
             vp.dataset.ignoreScroll = "true";
-            try {
-                vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
-            } catch(e) {
-                vp.scrollLeft = playheadTime * pxPerSec;
-            }
+            vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
             setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 50);
             document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
             document.getElementById('timeText').innerText = `PLAYHEAD: ${playheadTime.toFixed(1)}s / END: ${currentLoopLimit.toFixed(1)}s`;
@@ -2716,6 +2586,7 @@ if (val === "DONE_ALL") {
     </script>
 </body>
 </html>
+
 
 
 
