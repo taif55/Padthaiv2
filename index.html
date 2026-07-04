@@ -2065,7 +2065,7 @@ if (val === "DONE_ALL") {
             }
         }
 
-        function toggleFollow() {
+       function toggleFollow() {
             isFollowingPlayhead = !isFollowingPlayhead;
             const btn = document.getElementById('followBtn');
             if(isFollowingPlayhead) {
@@ -2073,19 +2073,30 @@ if (val === "DONE_ALL") {
                 if(isPlaying) {
                     const vp = document.getElementById('timelineViewport');
                     vp.dataset.ignoreScroll = "true";
-                    // ป้องกัน Error ในมือถือที่ไม่มีคำสั่ง scrollTo แบบ Object
-                try {
-                    vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
-                } catch(e) {
-                    vp.scrollLeft = playheadTime * pxPerSec;
+                    try {
+                        vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
+                    } catch(e) {
+                        vp.scrollLeft = playheadTime * pxPerSec;
+                    }
+                    setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 300);
                 }
-                setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 500);
-                document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
-                document.getElementById('timeText').innerText = `PLAYHEAD: ${playheadTime.toFixed(1)}s / END: ${currentLoopLimit.toFixed(1)}s`;
-                scrubLiveFrame();
+            } else { 
+                btn.className = "bg-gray-700 text-white px-2 py-1.5 rounded-lg text-[9px] font-bold flex-none"; 
             }
         }
 
+        function updateZoom(val) { 
+            pxPerSec = parseInt(val) || 20; 
+            updateGridBackground(); 
+            renderClips(); 
+            if (!isPlaying) {
+                const vp = document.getElementById('timelineViewport');
+                vp.dataset.ignoreScroll = "true";
+                vp.scrollLeft = playheadTime * pxPerSec;
+                setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 50);
+                document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
+            }
+        }
         function applySpeedScale(val) {
             let scaleRatio = parseFloat(val);
             if (scaleRatio === 1.0) return; 
@@ -2308,7 +2319,11 @@ if (val === "DONE_ALL") {
                 playheadTime = c.start;
                 const vp = document.getElementById('timelineViewport');
                 vp.dataset.ignoreScroll = "true";
-                vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
+               try {
+                    vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
+                } catch(e) {
+                    vp.scrollLeft = playheadTime * pxPerSec;
+                }
                 setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 500);
                 document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
                 document.getElementById('timeText').innerText = `PLAYHEAD: ${playheadTime.toFixed(1)}s / END: ${currentLoopLimit.toFixed(1)}s`;
@@ -2489,7 +2504,11 @@ if (val === "DONE_ALL") {
             cancelAnimationFrame(playInterval); 
             const vp = document.getElementById('timelineViewport');
             vp.dataset.ignoreScroll = "true";
-            vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
+            try {
+                vp.scrollTo({ left: playheadTime * pxPerSec, behavior: 'smooth' });
+            } catch(e) {
+                vp.scrollLeft = playheadTime * pxPerSec;
+            }
             setTimeout(() => { vp.dataset.ignoreScroll = "false"; }, 50);
             document.getElementById('playhead').style.left = (playheadTime * pxPerSec) + 'px';
             document.getElementById('timeText').innerText = `PLAYHEAD: ${playheadTime.toFixed(1)}s / END: ${currentLoopLimit.toFixed(1)}s`;
