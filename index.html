@@ -1162,15 +1162,46 @@
             document.getElementById('codeModal').classList.add('hidden');
         }
 
+        let savedRawCodeMemory = ""; // เพิ่มตัวแปรสำหรับจำค่าโค้ดที่คัดลอกไว้
+
         function copyCode() {
             const textArea = document.getElementById('codeTextArea');
             textArea.select();
             document.execCommand('copy');
-            alert("คัดลอกโค้ดแล้ว!");
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textArea.value).catch(() => {});
+            }
+            savedRawCodeMemory = textArea.value; // จำค่าเก็บไว้ในตัวแปรระบบ
+            closeCodeModal(); // ปิดหน้าต่าง Raw Code Modal
+            handleBack(); // บันทึกค่าและปิดหน้าต่าง Edit กลับสู่หน้า Index ทันที
+            alert("คัดลอกโค้ดและจำค่าเรียบร้อย! (กลับสู่หน้าหลัก Index แล้ว)");
         }
 
-        function applyPastedCode() {
-            const rawCode = document.getElementById('codeTextArea').value.trim();
+        async function applyPastedCode() {
+            const textArea = document.getElementById('codeTextArea');
+            let currentGenerated = generateCodeStr();
+            let rawCode = textArea.value.trim();
+            
+            // ถ้าโค้ดในกล่องยังเป็นโค้ดเดิมของลายนี้ (ไม่ได้กด Ctrl+V เอง) ให้ดึงโค้ดจาก Clipboard หรือที่จำค่าไว้มาแปะแทนที่ทันที
+            if (rawCode === currentGenerated || !rawCode) {
+                let pastedFromClip = false;
+                try {
+                    if (navigator.clipboard && navigator.clipboard.readText) {
+                        let clipText = await navigator.clipboard.readText();
+                        if (clipText && clipText.trim() && clipText.trim() !== currentGenerated) {
+                            rawCode = clipText.trim();
+                            textArea.value = rawCode;
+                            pastedFromClip = true;
+                        }
+                    }
+                } catch (e) {}
+                
+                if (!pastedFromClip && savedRawCodeMemory) {
+                    rawCode = savedRawCodeMemory;
+                    textArea.value = rawCode;
+                }
+            }
+            
             if (!rawCode) { closeCodeModal(); return; }
             
             clips = [];
@@ -1214,9 +1245,20 @@
             renderClips();
             updateLoopLine();
             fitToScreen();
+            updateCodeMonitor();
+            if (clips.length > 0) {
+                selectClip(clips[0].id);
+            } else {
+                updateSelectedClipUI();
+            }
+            if (!isPlaying) {
+                scrubLiveFrame();
+            } else {
+                sendFullCodeToBT();
+            }
             closeCodeModal();
-            handleBack(); 
-            alert("แปลงโค้ดกลับเป็นลายไฟสำเร็จ!");
+            // ตัดบรรทัด handleBack(); ออก เพื่อให้คงอยู่ในหน้า Edit ไม่กลับไปหน้า Index
+            alert("แปะโค้ดแทนที่เรียบร้อย! (ยังอยู่ในหน้า Edit)");
         }
 let sclDragBaseVal = 3;
 
